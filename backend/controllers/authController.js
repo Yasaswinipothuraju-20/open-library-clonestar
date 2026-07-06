@@ -1,0 +1,105 @@
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+// Register User
+const registerUser = async (req, res) => {
+  try {
+    // Get data from request body
+    const { name, email, password } = req.body;
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User already exists",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const newUser = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    res.status(201).json({
+      message: "User Registered Successfully",
+      user: newUser,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+// Login User
+const loginUser = async (req, res) => {
+
+    try {
+
+        const { email, password } = req.body;
+
+        // Check user exists
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        // Compare Password
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({
+                message: "Invalid Password"
+            });
+        }
+
+        // Generate JWT Token
+        const token = jwt.sign(
+
+            {
+                id: user._id
+            },
+
+            process.env.JWT_SECRET,
+
+            {
+                expiresIn: "1d"
+            }
+
+        );
+
+        res.status(200).json({
+
+            message: "Login Successful",
+
+            token
+
+        });
+
+    }
+
+    catch (error) {
+
+        res.status(500).json({
+
+            message: error.message
+
+        });
+
+    }
+
+};
+module.exports = {
+  registerUser,
+  loginUser
+};
